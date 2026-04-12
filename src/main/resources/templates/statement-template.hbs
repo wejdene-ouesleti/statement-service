@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <title>Account Statement</title>
+    <style>
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid black; padding: 5px; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+<h1>Account Statement - {{accountId}}</h1>
+<p>Date: {{generatedDate}}</p>
+<p>Opening Balance: {{openingBalance}}</p>
+<p>Closing Balance: {{closingBalance}}</p>
+<p>Total Credit: {{totalCredit}}</p>
+<p>Total Debit: {{totalDebit}}</p>
+
+<table>
+    <tr>
+        <th>Date</th>
+        <th>Description</th>
+        <th>Credit</th>
+        <th>Debit</th>
+        <th>Balance</th>
+    </tr>
+    {{#each transactions}}
+        <tr>
+            <td>{{valueDate}}</td>
+            <td>{{transactionReference}}</td>
+            <td>{{creditAmount}}</td>
+            <td>{{debitAmount}}</td>
+            <td>{{closingBalance}}</td>
+        </tr>
+    {{/each}}
+</table>
+</body>
+</html>

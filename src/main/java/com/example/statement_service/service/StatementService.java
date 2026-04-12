@@ -1,0 +1,129 @@
+package com.example.statement_service.service;
+import com.example.statement_service.client.T24Client;
+import com.example.statement_service.entity.AccountSubscription;
+import com.example.statement_service.entity.Statement;
+import com.example.statement_service.entity.TransactionDTO;
+import com.example.statement_service.repository.StatementRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+@Service
+public class StatementService {
+
+    @Autowired
+    private StatementRepository statementRepository;
+
+    @Autowired
+    private T24Client t24Client;
+
+    @Autowired
+    private AccountSubscriptionService subscriptionService;
+    private static final Logger logger = LoggerFactory.getLogger(StatementService.class);
+    public Statement generateStatement(AccountSubscription acc) {
+        String accountId = acc.getAccountId();
+        String type = acc.getSubscriptionType();
+        LocalDate nextExecutionDate = acc.getNextExecutionDate();
+
+        LocalDate fromDate = getFromDate(type, nextExecutionDate);
+        // TO DO
+        List<TransactionDTO> transactions =
+                t24Client.getTransactions(accountId, fromDate, nextExecutionDate);
+
+        logger.info("FromDate: " + fromDate + ", ToDate: " + nextExecutionDate + ", transactions found: " + transactions.size());
+        if (statementRepository.existsByAccountIdAndFromDateAndToDate(accountId, fromDate, nextExecutionDate)) {
+            logger.warn("Statement already exists for this period");
+            return null;
+        }
+        double openingBalance = transactions.isEmpty()
+                ? 0
+                : transactions.get(0).getClosingBalance();
+
+        double closingBalance = transactions.isEmpty()
+                ? 0
+                : transactions.get(transactions.size() - 1).getClosingBalance();
+
+        double totalCredit = transactions.stream().mapToDouble(TransactionDTO::getCreditAmount).sum();
+        double totalDebit = transactions.stream().mapToDouble(TransactionDTO::getDebitAmount).sum();
+
+        Statement statement = new Statement();
+        statement.setAccountId(accountId);
+        statement.setGeneratedDate(LocalDate.now());
+        statement.setFromDate(fromDate);
+        statement.setToDate(nextExecutionDate);
+        statement.setOpeningBalance(openingBalance);
+        statement.setClosingBalance(closingBalance);
+        statement.setTotalCredit(totalCredit);
+        statement.setTotalDebit(totalDebit);
+        Statement saved = statementRepository.save(statement);
+        logger.info("Statement saved for account: " + saved.getAccountId() + " at " + saved.getGeneratedDate());
+        return saved;
+
+    }
+
+
+
+    @Scheduled(cron = "0 */1 * * * ?") // chaque  minuite
+   //@Scheduled(cron = "0 0 0 * * ?")
+    public void generateDailyStatements() {
+
+        logger.info("CRON JOB STARTED");
+        LocalDate today = LocalDate.now();
+
+        List<AccountSubscription> accounts = subscriptionService.getAccountsToProcess(today);
+
+        for (AccountSubscription acc : accounts) {
+
+            // 🔥 FILTRE IMPORTANT
+            if (!acc.isSubscribed()) continue;
+
+            if (acc.getNextExecutionDate() == null) continue;
+
+            if (acc.getNextExecutionDate().isAfter(today)) continue;
+
+            logger.info("Processing account: " + acc.getAccountId());
+
+            // 1️⃣ Génération
+            Statement statement = generateStatement(acc);
+
+            // 2️⃣ Update subscription
+            acc.setLastExecutionDate(today);
+            acc.setNextExecutionDate(
+                    calculateNextDate(acc.getSubscriptionType(), acc.getNextExecutionDate())
+            );
+
+            // 3️⃣ Appel update API
+            subscriptionService.save(acc);        }
+
+        logger.info("CRON JOB FINISHED");
+    }
+    private LocalDate calculateNextDate(String type, LocalDate today) {
+
+        switch (type) {
+            case "DAILY":
+                return today.plusDays(1);
+            case "WEEKLY":
+                return today.plusWeeks(1);
+            case "MONTHLY":
+                return today.plusMonths(1);
+            default:
+                return today.plusDays(1);
+        }
+    }
+    private LocalDate getFromDate(String type, LocalDate today) {
+        switch (type) {
+            case "DAILY": return today.minusDays(1);
+            case "WEEKLY": return today.minusWeeks(1);
+            case "MONTHLY": return today.minusMonths(1);
+            default: return today.minusDays(1);
+        }
+    }
+
+    public List<TransactionDTO> getTransactions(String accountId, LocalDate from, LocalDate to) {
+        return t24Client.getTransactions(accountId, from, to);
+    }
+}
