@@ -6,6 +6,8 @@ import com.example.statement_service.repository.StatementRepository;
 import com.example.statement_service.service.PdfService;
 import com.example.statement_service.service.StatementService;
 import com.example.statement_service.service.TemplateService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
-
+@Tag(name = "Statements API", description = "Bank Statement Management")
 @RestController
 @RequestMapping("/statements")
 public class StatementController {
@@ -35,7 +37,7 @@ public class StatementController {
     @Autowired
     private StatementRepository statementRepository;
 
-
+    @Operation(summary = "Get statements by account and date range")
     @GetMapping
     public List<Statement> getStatements(
             @RequestParam String accountId,
@@ -50,8 +52,8 @@ public class StatementController {
                 );
     }
 
-
-    // Endpoint pour télécharger le PDF
+    @Operation(summary = "Download statement as PDF")
+    // Endpoint to download the PDF
     @GetMapping("/download/{statementId}")
 
     public ResponseEntity<byte[]> downloadPdf(@PathVariable String statementId) {
@@ -68,7 +70,7 @@ public class StatementController {
                             statement.getToDate()
                     );
 
-            // 2️⃣ Préparer les données pour le template
+            //Prepare the data for the template
             Map<String, Object> data = Map.of(
                     "accountId", statement.getAccountId(),
                     "generatedDate", statement.getGeneratedDate(),
@@ -81,24 +83,24 @@ public class StatementController {
                     "transactions", filtered
             );
 
-            // 3️⃣ Générer le HTML via Handlebars
+            //Generate HTML using Handlebars
             String html = templateService.generateHtml(data);
-            logger.info("HTML généré : \n" + html); // debug
+            logger.info("Generated HTML : \n" + html); // debug
 
-            // 4️⃣ Générer le PDF dans un ByteArrayOutputStream
+            //Generate the PDF in a ByteArrayOutputStream
             byte[] pdf = pdfService.generatePdf(html);
 
 
-            // 5️⃣ Retourner le PDF au client
+            //Return the PDF to the client
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=statement.pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
 
         } catch (Exception e) {
-            e.printStackTrace(); // Affiche l'erreur complète dans la console
+            e.printStackTrace(); // Displays the full error message in the console
             return ResponseEntity.status(500)
-                    .body(("Erreur lors de la génération du PDF : " + e.getMessage()).getBytes());
+                    .body(("Error generating the PDF : " + e.getMessage()).getBytes());
         }
     }
 

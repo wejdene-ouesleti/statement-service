@@ -6,7 +6,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import com.example.statement_service.entity.Account;
 import com.example.statement_service.entity.TransactionDTO;
 
