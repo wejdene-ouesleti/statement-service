@@ -1,6 +1,5 @@
 package com.example.statement_service.entity;
 
-import java.time.LocalDate;
 
 public class Account {
     private String accountId;

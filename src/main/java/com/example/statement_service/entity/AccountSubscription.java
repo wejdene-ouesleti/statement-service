@@ -10,7 +10,6 @@ public class AccountSubscription {
     private String accountId;
 
     private boolean subscribed;
-    private boolean active;
 
     private String subscriptionType;
 
@@ -37,13 +36,7 @@ public class AccountSubscription {
         this.subscribed = subscribed;
     }
 
-    public boolean isActive() {
-        return active;
-    }
 
-    public void setActive(boolean active) {
-        this.active = active;
-    }
 
     public String getSubscriptionType() {
         return subscriptionType;

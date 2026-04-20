@@ -5,7 +5,6 @@ import com.example.statement_service.entity.Statement;
 import com.example.statement_service.entity.TransactionDTO;
 import com.example.statement_service.repository.StatementRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -30,15 +29,17 @@ public class StatementService {
         LocalDate nextExecutionDate = acc.getNextExecutionDate();
 
         LocalDate fromDate = getFromDate(type, nextExecutionDate);
-        // TO DO
-        List<TransactionDTO> transactions =
-                t24Client.getTransactions(accountId, fromDate, nextExecutionDate);
 
-        logger.info("FromDate: " + fromDate + ", ToDate: " + nextExecutionDate + ", transactions found: " + transactions.size());
         if (statementRepository.existsByAccountIdAndFromDateAndToDate(accountId, fromDate, nextExecutionDate)) {
             logger.warn("Statement already exists for this period");
             return null;
         }
+
+        List<TransactionDTO> transactions =
+                t24Client.getTransactions(accountId, fromDate, nextExecutionDate);
+
+        logger.info("FromDate: " + fromDate + ", ToDate: " + nextExecutionDate + ", transactions found: " + transactions.size());
+
         double openingBalance = transactions.isEmpty()
                 ? 0
                 : transactions.get(0).getClosingBalance();
@@ -67,41 +68,7 @@ public class StatementService {
 
 
 
-    @Scheduled(cron = "0 */1 * * * ?") // chaque  minuite
-   //@Scheduled(cron = "0 0 0 * * ?")
-    public void generateDailyStatements() {
-
-        logger.info("CRON JOB STARTED");
-        LocalDate today = LocalDate.now();
-
-        List<AccountSubscription> accounts = subscriptionService.getAccountsToProcess(today);
-
-        for (AccountSubscription acc : accounts) {
-
-            // 🔥 FILTRE IMPORTANT
-            if (!acc.isSubscribed()) continue;
-
-            if (acc.getNextExecutionDate() == null) continue;
-
-            if (acc.getNextExecutionDate().isAfter(today)) continue;
-
-            logger.info("Processing account: " + acc.getAccountId());
-
-            // 1️⃣ Génération
-            Statement statement = generateStatement(acc);
-
-            // 2️⃣ Update subscription
-            acc.setLastExecutionDate(today);
-            acc.setNextExecutionDate(
-                    calculateNextDate(acc.getSubscriptionType(), acc.getNextExecutionDate())
-            );
-
-            // 3️⃣ Appel update API
-            subscriptionService.save(acc);        }
-
-        logger.info("CRON JOB FINISHED");
-    }
-    private LocalDate calculateNextDate(String type, LocalDate today) {
+    public LocalDate calculateNextDate(String type, LocalDate today) {
 
         switch (type) {
             case "DAILY":

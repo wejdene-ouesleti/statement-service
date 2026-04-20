@@ -19,7 +19,6 @@ public class AccountSubscriptionService {
         AccountSubscription sub = new AccountSubscription();
         sub.setAccountId(accountId);
         sub.setSubscribed(true);
-        sub.setActive(true);
         sub.setSubscriptionType(type);
         sub.setSubscriptionDate(LocalDate.now());
         sub.setNextExecutionDate(LocalDate.now());
@@ -28,7 +27,7 @@ public class AccountSubscriptionService {
 
 
     public List<AccountSubscription> getSubscribedAccounts() {
-        // récupère tous les abonnés actifs
+        // retrieves all active subscribers
         return repository.findBySubscribedTrue();
     }
 
