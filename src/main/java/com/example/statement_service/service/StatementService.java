@@ -54,12 +54,13 @@ public class StatementService {
         Statement statement = new Statement();
         statement.setAccountId(accountId);
         statement.setGeneratedDate(LocalDate.now());
-        statement.setFromDate(fromDate);
-        statement.setToDate(nextExecutionDate);
+        statement.setFromDate(fromDate.atStartOfDay());
+        statement.setToDate(nextExecutionDate.atStartOfDay());
         statement.setOpeningBalance(openingBalance);
         statement.setClosingBalance(closingBalance);
         statement.setTotalCredit(totalCredit);
         statement.setTotalDebit(totalDebit);
+        statement.setTransactions(transactions);
         Statement saved = statementRepository.save(statement);
         logger.info("Statement saved for account: " + saved.getAccountId() + " at " + saved.getGeneratedDate());
         return saved;
@@ -90,7 +91,5 @@ public class StatementService {
         }
     }
 
-    public List<TransactionDTO> getTransactions(String accountId, LocalDate from, LocalDate to) {
-        return t24Client.getTransactions(accountId, from, to);
-    }
+
 }
