@@ -21,9 +21,9 @@ public class AccountSubscriptionController {
     }
     @Operation(summary = "Subscribe an account")
     @PostMapping("/{accountId}")
-    public ResponseEntity<?> subscribe(@PathVariable String accountId) {
+    public ResponseEntity<?> subscribe(@PathVariable String accountId ,  @RequestParam String type) {
         return ResponseEntity.ok(
-                service.subscribe(accountId, "MONTHLY")
+                service.subscribe(accountId, type)
         );
     }
     @Operation(summary = "Get all subscribed accounts")

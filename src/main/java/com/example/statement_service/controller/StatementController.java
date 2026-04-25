@@ -1,6 +1,7 @@
 package com.example.statement_service.controller;
 
 import com.example.statement_service.entity.Statement;
+import com.example.statement_service.entity.StatementSummaryDTO;
 import com.example.statement_service.entity.TransactionDTO;
 import com.example.statement_service.repository.StatementRepository;
 import com.example.statement_service.service.PdfService;
@@ -39,7 +40,7 @@ public class StatementController {
 
     @Operation(summary = "Get statements by account and date range")
     @GetMapping
-    public List<Statement> getStatements(
+    public List<StatementSummaryDTO> getStatements(
             @RequestParam String accountId,
             @RequestParam String fromDate,
             @RequestParam String toDate) {
@@ -49,7 +50,21 @@ public class StatementController {
                         accountId,
                         LocalDate.parse(fromDate),
                         LocalDate.parse(toDate)
-                );
+                )
+                .stream()
+                .map(s -> {
+                    StatementSummaryDTO dto = new StatementSummaryDTO();
+                    dto.setId(s.getId());
+                    dto.setAccountId(s.getAccountId());
+                    dto.setFromDate(s.getFromDate());
+                    dto.setToDate(s.getToDate());
+                    dto.setOpeningBalance(s.getOpeningBalance());
+                    dto.setClosingBalance(s.getClosingBalance());
+                    dto.setTotalCredit(s.getTotalCredit());
+                    dto.setTotalDebit(s.getTotalDebit());
+                    return dto;
+                })
+                .toList();
     }
 
     @Operation(summary = "Download statement as PDF")
@@ -63,12 +78,11 @@ public class StatementController {
                     .orElseThrow(() -> new RuntimeException("Statement not found"));
 
 
-            List<TransactionDTO> filtered =
-                    statementService.getTransactions(
-                            statement.getAccountId(),
-                            statement.getFromDate(),
-                            statement.getToDate()
-                    );
+            List<TransactionDTO> transactions = statement.getTransactions();
+
+            if (transactions == null) {
+                transactions = List.of();
+            }
 
             //Prepare the data for the template
             Map<String, Object> data = Map.of(
@@ -80,7 +94,7 @@ public class StatementController {
                     "closingBalance", statement.getClosingBalance(),
                     "totalCredit", statement.getTotalCredit(),
                     "totalDebit", statement.getTotalDebit(),
-                    "transactions", filtered
+                    "transactions", transactions
             );
 
             //Generate HTML using Handlebars
